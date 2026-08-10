@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>2026 우리가족 가을 벳부여행</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script defer src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ink: #19243a;
+      --muted: #647085;
+      --line: #d7e0e8;
+      --paper: #f7f9f7;
+      --panel: #ffffff;
+      --teal: #0f766e;
+      --teal-2: #0d9488;
+      --coral: #d86b4a;
+      --gold: #b5872f;
+      --blue: #2563eb;
+      --violet: #7c3aed;
+      --rose: #be123c;
+      --green: #15803d;
+      --cyan: #0891b2;
+      --shadow: 0 16px 40px rgba(24, 36, 58, 0.12);
+    }
+    .leaflet-pane,
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow,
+    .leaflet-tile-container,
+    .leaflet-pane > svg,
+    .leaflet-pane > canvas,
+    .leaflet-zoom-box,
+    .leaflet-image-layer,
+    .leaflet-layer {
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .leaflet-container {
+      overflow: hidden;
+      touch-action: pan-x pan-y;
+    }
+    .leaflet-tile,
+    .leaflet-marker-icon,
+    .leaflet-marker-shadow {
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    .leaflet-tile { visibility: hidden; }
+    .leaflet-tile-loaded { visibility: inherit; }
+    .leaflet-tile-pane { z-index: 200; }
+    .leaflet-overlay-pane { z-index: 400; }
+    .leaflet-shadow-pane { z-index: 500; }
+    .leaflet-marker-pane { z-index: 600; }
+    .leaflet-tooltip-pane { z-index: 650; }
+    .leaflet-popup-pane { z-index: 700; }
+    .leaflet-control { position: relative; z-index: 800; pointer-events: auto; }
+    .leaflet-top,
+    .leaflet-bottom { position: absolute; z-index: 1000; pointer-events: none; }
+    .leaflet-top { top: 0; }
+    .leaflet-right { right: 0; }
+    .leaflet-bottom { bottom: 0; }
+    .leaflet-left { left: 0; }
+    .leaflet-control-zoom a {
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      display: block;
+      text-align: center;
+      text-decoration: none;
+      background: #fff;
+      color: var(--ink);
+      border-bottom: 1px solid var(--line);
+    }
+    .leaflet-control-zoom a:last-child { border-bottom: 0; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Noto Sans KR", "Malgun Gothic", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+    }
+    button, input, select { font: inherit; }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    .topbar {
+      display: grid;
+      grid-template-columns: minmax(260px, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255,255,255,0.95);
+      position: sticky;
+      top: 0;
+      z-index: 500;
+      backdrop-filter: blur(10px);
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 20px;
+      line-height: 1.25;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+    .brand p {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.4;
+    }
+    .top-actions, .segmented, .chip-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn, .chip {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 11px;
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+      white-space: nowrap;
+    }
+    .btn:hover, .chip:hover { transform: translateY(-1px); border-color: #9bb2c8; }
+    .btn.primary { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .btn.icon-only { width: 38px; padding: 8px; }
+    .chip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .chip[data-category="attraction"].active { background: var(--coral); border-color: var(--coral); }
+    .chip[data-category="hotel"].active { background: var(--violet); border-color: var(--violet); }
+    .chip[data-category="transport"].active { background: var(--blue); border-color: var(--blue); }
+    .chip[data-category="food"].active { background: var(--gold); border-color: var(--gold); }
+    .chip[data-category="museum"].active { background: var(--rose); border-color: var(--rose); }
+    .chip[data-category="scenic"].active { background: var(--green); border-color: var(--green); }
+    .chip[data-category="rental"].active { background: var(--cyan); border-color: var(--cyan); }
+    .icon { width: 17px; height: 17px; stroke-width: 2.2; }
+    .workspace {
+      height: calc(100vh - 76px);
+      min-height: 680px;
+      display: grid;
+      grid-template-columns: minmax(320px, 390px) minmax(420px, 1fr) minmax(310px, 380px);
+      gap: 0;
+      min-width: 0;
+    }
+    aside, .detail {
+      min-height: 0;
+      min-width: 0;
+      overflow: auto;
+      background: var(--panel);
+    }
+    aside {
+      border-right: 1px solid var(--line);
+      padding: 14px;
+    }
+    .detail {
+      border-left: 1px solid var(--line);
+      padding: 14px;
+    }
+    .map-wrap {
+      position: relative;
+      min-height: 0;
+      min-width: 0;
+      height: 100%;
+      background: #e7ecef;
+    }
+    #map { height: 100%; min-height: 0; min-width: 0; width: 100%; }
+    .floating-controls {
+      position: absolute;
+      z-index: 450;
+      left: 14px;
+      top: 14px;
+      right: 14px;
+      display: grid;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .control-panel {
+      background: rgba(255,255,255,0.94);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      padding: 10px;
+      pointer-events: auto;
+    }
+    .control-panel .label {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 7px;
+      font-weight: 700;
+    }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .day-btn {
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 48px;
+      border-radius: 8px;
+      padding: 7px 5px;
+      cursor: pointer;
+      text-align: center;
+    }
+    .day-btn strong { display: block; font-size: 12px; line-height: 1.2; }
+    .day-btn span { display: block; margin-top: 2px; font-size: 11px; color: var(--muted); line-height: 1.2; }
+    .day-btn.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+    .day-btn.active span { color: rgba(255,255,255,0.85); }
+    .panel-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .panel-title h2 {
+      font-size: 15px;
+      margin: 0;
+      line-height: 1.3;
+    }
+    .small {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin: 10px 0 12px;
+    }
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px;
+      background: #fbfcfd;
+    }
+    .stat b {
+      display: block;
+      font-size: 16px;
+      line-height: 1.1;
+      color: var(--teal);
+    }
+    .stat span {
+      display: block;
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .search {
+      position: relative;
+      margin: 10px 0;
+    }
+    .search input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px 8px 34px;
+      outline: none;
+      background: #fff;
+    }
+    .search .icon {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      color: var(--muted);
+    }
+    .list {
+      display: grid;
+      gap: 9px;
+      padding-bottom: 14px;
+    }
+    .place-card {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: 76px 1fr;
+      gap: 10px;
+      min-height: 88px;
+      padding: 8px;
+      cursor: pointer;
+    }
+    .place-card:hover { border-color: #9bb2c8; box-shadow: 0 8px 22px rgba(24,36,58,0.08); }
+    .place-card.active { border-color: var(--teal); box-shadow: 0 0 0 2px rgba(15,118,110,0.15); }
+    .thumb {
+      width: 76px;
+      height: 72px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #dae7e3, #f5d6c8);
+      object-fit: cover;
+      display: block;
+    }
+    .place-card h3 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 5px 0;
+    }
+    .pill {
+      border-radius: 999px;
+      padding: 3px 7px;
+      font-size: 11px;
+      background: #eef3f6;
+      color: #405167;
+      line-height: 1.2;
+    }
+    .pill.attraction { background: #fff1ec; color: #9c3c21; }
+    .pill.hotel { background: #f2ecff; color: #5b21b6; }
+    .pill.transport { background: #eaf1ff; color: #1d4ed8; }
+    .pill.food { background: #fff7df; color: #865d00; }
+    .pill.museum { background: #fff0f3; color: #9f1239; }
+    .pill.scenic { background: #ecfdf3; color: #166534; }
+    .pill.rental { background: #ecfeff; color: #155e75; }
+    .detail-hero {
+      min-height: 152px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: linear-gradient(135deg, #d9eee9, #fae1d6);
+      margin-bottom: 12px;
+    }
+    .detail-hero img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+    .detail h2 {
+      margin: 0 0 4px;
+      font-size: 20px;
+      line-height: 1.3;
+    }
+    .detail h3 {
+      margin: 18px 0 8px;
+      font-size: 15px;
+    }
+    .facts {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .fact {
+      border-left: 3px solid var(--teal);
+      background: #f7fbfa;
+      padding: 8px 10px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .fact b { display: block; margin-bottom: 2px; }
+    .google-frame {
+      width: 100%;
+      height: 220px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      margin-top: 8px;
+      background: #eef3f6;
+    }
+    .route-box {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+      margin: 12px 0;
+    }
+    .route-box h3 { margin-top: 0; }
+    .route-steps {
+      list-style: none;
+      padding: 0;
+      margin: 8px 0 0;
+      display: grid;
+      gap: 6px;
+    }
+    .route-steps li {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      align-items: start;
+      gap: 6px;
+      font-size: 13px;
+    }
+    .route-steps span {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--teal);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+      font-size: 13px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--line);
+      padding: 9px 10px;
+      text-align: left;
+      vertical-align: top;
+      line-height: 1.35;
+    }
+    th {
+      background: var(--teal);
+      color: #fff;
+      font-weight: 800;
+    }
+    tr:last-child td { border-bottom: 0; }
+    .lower {
+      padding: 18px;
+      display: grid;
+      gap: 18px;
+      background: var(--paper);
+    }
+    .section {
+      max-width: 1160px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .section h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .source-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 14px;
+      font-size: 12px;
+    }
+    .source-list a { color: var(--teal); overflow-wrap: anywhere; }
+    .custom-marker {
+      width: 30px;
+      height: 30px;
+      border-radius: 50% 50% 50% 6px;
+      transform: rotate(-45deg);
+      border: 2px solid #fff;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.22);
+      display: grid;
+      place-items: center;
+    }
+    .custom-marker span {
+      transform: rotate(45deg);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .marker-attraction { background: var(--coral); }
+    .marker-hotel { background: var(--violet); }
+    .marker-transport { background: var(--blue); }
+    .marker-food { background: var(--gold); }
+    .marker-museum { background: var(--rose); }
+    .marker-scenic { background: var(--green); }
+    .marker-rental { background: var(--cyan); }
+    .leaflet-popup-content { font-family: inherit; min-width: 210px; }
+    .popup-title { font-weight: 800; margin-bottom: 4px; }
+    .popup-link { color: var(--teal); font-weight: 700; }
+    @media (max-width: 1180px) {
+      .workspace { grid-template-columns: 340px 1fr; }
+      .detail {
+        grid-column: 1 / -1;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+        max-height: none;
+      }
+    }
+    @media (max-width: 820px) {
+      body { overflow-x: hidden; }
+      .app,
+      .topbar,
+      .workspace,
+      .lower,
+      aside,
+      .map-wrap,
+      .detail {
+        width: 100%;
+        max-width: 100vw;
+      }
+      .topbar { grid-template-columns: 1fr; }
+      .workspace { grid-template-columns: 1fr; }
+      aside { border-right: 0; border-bottom: 1px solid var(--line); max-height: 54vh; }
+      .workspace { height: auto; min-height: 0; }
+      .map-wrap { height: auto; min-height: 70vh; }
+      #map { height: 58vh; min-height: 420px; }
+      .days { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .floating-controls { position: static; padding: 10px; background: #eef3f6; }
+      .map-wrap { display: flex; flex-direction: column; }
+      #map { flex: 1; min-height: 58vh; }
+      .source-list { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .section { min-width: 0; }
+      .table-wrap {
+        max-width: calc(100vw - 36px);
+        overflow-x: auto;
+      }
+      #categoryFilters {
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+      }
+      #categoryFilters .chip {
+        width: 100%;
+        min-width: 0;
+        white-space: normal;
+      }
+      .days { grid-template-columns: 1fr !important; }
+      .day-btn { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <h1>2026 우리가족 가을 벳부여행</h1>
+        <p>11/11 KE791 11:05 출국 · 11/15 귀국 · 부부 + 8세 + 6세</p>
+      </div>
+      <div class="top-actions">
+        <button class="btn" id="fitAllBtn" title="전체 마커 보기"><i data-lucide="maximize-2" class="icon"></i>전체</button>
+        <a class="btn primary" id="dayGoogleBtn" target="_blank" rel="noopener" title="선택한 날짜의 Google 지도 경로 열기"><i data-lucide="route" class="icon"></i>Google 경로</a>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside>
+        <div class="panel-title">
+          <h2>마킹 장소</h2>
+          <span class="small" id="visibleCount"></span>
+        </div>
+        <div class="stat-grid">
+          <div class="stat"><b id="attractionCount">0</b><span>관광/명승</span></div>
+          <div class="stat"><b id="museumCount">0</b><span>박물관/과학</span></div>
+          <div class="stat"><b id="foodCount">0</b><span>식사</span></div>
+          <div class="stat"><b id="rentalCount">0</b><span>렌터카</span></div>
+          <div class="stat"><b id="hotelCount">0</b><span>숙소</span></div>
+        </div>
+        <div class="segmented chip-row" id="categoryFilters" aria-label="카테고리">
+          <button class="chip active" data-category="all"><i data-lucide="layers-3" class="icon"></i>전체</button>
+          <button class="chip" data-category="attraction"><i data-lucide="camera" class="icon"></i>관광</button>
+          <button class="chip" data-category="scenic"><i data-lucide="mountain" class="icon"></i>명승</button>
+          <button class="chip" data-category="museum"><i data-lucide="landmark" class="icon"></i>박물관/과학</button>
+          <button class="chip" data-category="hotel"><i data-lucide="bed-double" class="icon"></i>숙소</button>
+          <button class="chip" data-category="transport"><i data-lucide="train-front" class="icon"></i>이동</button>
+          <button class="chip" data-category="rental"><i data-lucide="car" class="icon"></i>렌터카</button>
+          <button class="chip" data-category="food"><i data-lucide="utensils" class="icon"></i>식사</button>
+        </div>
+        <div class="search">
+          <i data-lucide="search" class="icon"></i>
+          <input id="searchInput" placeholder="장소·숙소 검색" />
+        </div>
+        <div class="list" id="placeList"></div>
+      </aside>
+
+      <section class="map-wrap">
+        <div class="floating-controls">
+          <div class="control-panel">
+            <p class="label">날짜</p>
+            <div class="days" id="dayButtons"></div>
+          </div>
+        </div>
+        <div id="map"></div>
+      </section>
+
+      <section class="detail" id="detailPanel"></section>
+    </main>
+
+    <section class="lower">
+      <div class="section">
+        <h2>벳푸 역사와 여행 맥락</h2>
+        <p class="small">온천·지옥순례·죽세공·향토음식을 같은 이야기로 묶으면 8세, 6세에게도 “왜 벳푸에 가는지”가 훨씬 선명해진다.</p>
+        <div class="table-wrap">
+          <table id="historyTable">
+            <thead><tr><th>주제</th><th>핵심 설명</th><th>여행 적용</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>벳푸·오이타 특산물</h2>
+        <div class="table-wrap">
+          <table id="specialtyTable">
+            <thead><tr><th>특산물</th><th>무엇인가</th><th>가족 여행 메모</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>꼭 먹어볼 것</h2>
+        <div class="table-wrap">
+          <table id="mustEatTable">
+            <thead><tr><th>메뉴</th><th>추천 장소</th><th>추천 이유</th><th>일정 배치</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>식사 추천</h2>
+        <p class="small">평점·리뷰 수는 2026-08-10 공개 검색 결과 기준이며 Google 지도 원자료는 실시간 변동될 수 있다.</p>
+        <div class="table-wrap">
+          <table id="foodTable">
+            <thead><tr><th>장소</th><th>평점/리뷰</th><th>리뷰 요약</th><th>추천 시점</th><th>가족 메모</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>렌터카 전략</h2>
+        <div class="table-wrap">
+          <table id="rentalTable">
+            <thead><tr><th>항목</th><th>권고</th><th>운용안</th><th>판단 근거</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>숙소 비교</h2>
+        <div class="table-wrap">
+          <table id="hotelTable">
+            <thead><tr><th>숙소</th><th>유형</th><th>가족 포인트</th><th>가격대</th><th>판정</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="section">
+        <h2>자료 출처</h2>
+        <div class="source-list" id="sources"></div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    const PLACES = [{"id": "fuk_airport", "name": "후쿠오카공항 국제선", "jp": "福岡空港 国際線ターミナル", "category": "transport", "days": ["11/11", "11/15"], "lat": 33.5848221, "lng": 130.4442945, "time": "입국/출국 거점", "cost": "공항-하카타 지하철/버스 별도", "fit": "12:30 도착 후 바로 벳푸 이동 시작. 귀국일에는 출발 2시간 전 도착을 목표.", "note": "국제선 터미널에서 벳푸행 고속버스 또는 하카타역 환승 JR 동선 선택.", "googleQuery": "Fukuoka Airport International Terminal", "source": "Nominatim/OpenStreetMap"}, {"id": "hakata", "name": "하카타역", "jp": "博多駅", "category": "transport", "days": ["11/11", "11/14", "11/15"], "lat": 33.5900413, "lng": 130.4199026, "time": "JR Sonic 환승/후쿠오카 전박", "cost": "후쿠오카 전박 호텔 접근 최상", "fit": "11/14 밤 숙소를 하카타역권으로 잡으면 11/15 오전 귀국 리스크가 낮다.", "note": "JR 이용 시 하카타-벳푸 특급 Sonic 축.", "googleQuery": "Hakata Station Fukuoka", "source": "Nominatim/OpenStreetMap"}, {"id": "beppu_station", "name": "벳푸역", "jp": "別府駅", "category": "transport", "days": ["11/11", "11/12", "11/13", "11/14"], "lat": 33.2796163, "lng": 131.5003073, "time": "벳푸 시내 기준점", "cost": "택시/버스/렌트 수령 거점", "fit": "역세권 숙소를 잡으면 아이 동반 식사·편의점·택시 접근성이 좋아진다.", "note": "시내 관광은 버스+택시, 외곽 관광은 1일 렌트가 효율적.", "googleQuery": "Beppu Station Oita", "source": "Nominatim/OpenStreetMap"}, {"id": "umi_jigoku", "name": "우미지고쿠", "jp": "海地獄", "category": "attraction", "days": ["11/12"], "lat": 33.31683, "lng": 131.4687332, "time": "60-90분", "cost": "지옥순례 공통권 기준 가족 약 ¥7,200", "fit": "색감과 증기가 강해 아이에게 가장 설명하기 쉬운 지옥순례 핵심.", "note": "뜨거운 온천 관람지라 손잡고 이동. 오전 방문이 사진과 동선 모두 좋다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Umi_Jigoku_(Sea_Hell)_in_Beppu.jpg", "googleQuery": "Umi Jigoku Beppu", "source": "Visit Oita, Nominatim"}, {"id": "kamado_jigoku", "name": "카마도지고쿠", "jp": "かまど地獄", "category": "attraction", "days": ["11/12"], "lat": 33.3164456, "lng": 131.4724531, "time": "45-60분", "cost": "공통권 포함", "fit": "체험형 포인트가 있어 우미지고쿠 다음으로 아이 반응이 좋다.", "note": "지옥찜 간식이나 족욕을 넣으면 11/12 일정의 리듬이 좋아진다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Kamado Jigoku Beppu", "source": "Kamado Jigoku official, Nominatim"}, {"id": "jigokumushi", "name": "지고쿠무시 공방 칸나와", "jp": "地獄蒸し工房鉄輪", "category": "food", "days": ["11/12"], "lat": 33.315443, "lng": 131.4761942, "time": "60-90분", "cost": "식재료 선택식", "fit": "온천 증기로 음식을 찌는 체험. 아이와 함께 ‘먹는 활동’으로 전환하기 좋다.", "note": "점심 피크를 피하거나 대기 시간을 감안.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Jigokumushi Kobo Kannawa Beppu", "source": "Nominatim/OpenStreetMap"}, {"id": "yukemuri", "name": "유케무리 전망대", "jp": "湯けむり展望台", "category": "attraction", "days": ["11/12"], "lat": 33.3156943, "lng": 131.4853007, "time": "20-30분", "cost": "무료", "fit": "벳푸 온천마을의 증기를 한눈에 보는 짧은 포토 스폿.", "note": "해질녘 또는 날씨 좋은 시간에 택시로 짧게 붙이기 좋다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Yukemuri Observatory Beppu", "source": "Nominatim/OpenStreetMap"}, {"id": "african_safari", "name": "규슈 아프리칸 사파리", "jp": "九州自然動物公園アフリカンサファリ", "category": "attraction", "days": ["11/13"], "lat": 33.3544704728, "lng": 131.4115502963, "time": "3-5시간", "cost": "입장 가족 약 ¥8,200 + 정글버스 별도", "fit": "8세·6세 기준 만족도 최상 후보. 정글버스는 오전 도착이 유리.", "note": "11월은 운영시간이 짧아 오전 렌트 출발 권장.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/%E5%8B%95%E7%89%A9%E5%9C%92%E3%83%90%E3%82%B9_%2833405606922%29.jpg/960px-%E5%8B%95%E7%89%A9%E5%9C%92%E3%83%90%E3%82%B9_%2833405606922%29.jpg", "googleQuery": "Kyushu African Safari Oita", "source": "Visit Oita, Wikipedia coordinates"}, {"id": "kijima", "name": "키지마 고원 파크", "jp": "城島高原パーク", "category": "attraction", "days": ["11/13"], "lat": 33.264487, "lng": 131.426856, "time": "3-5시간", "cost": "패스 포함 가족 약 ¥17,400", "fit": "놀이기구 선호도가 높으면 사파리 대안. 휴장일 확인 필요.", "note": "비·바람이면 만족도가 떨어질 수 있어 날씨 후보로 운용.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "Kijima Kogen Park Beppu", "source": "Visit Oita, Nominatim"}, {"id": "ropeway", "name": "벳푸 로프웨이", "jp": "別府ロープウェイ", "category": "attraction", "days": ["11/13"], "lat": 33.281528, "lng": 131.44111, "time": "1.5-2시간", "cost": "왕복 가족 약 ¥5,400", "fit": "맑은 날만 가치가 큰 전망 후보. 단풍이면 가을 여행감이 살아난다.", "note": "고정 일정이 아니라 사파리/키지마 후 날씨가 좋으면 추가.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "Beppu Ropeway", "source": "Visit Oita, Wikipedia coordinates"}, {"id": "kinrin", "name": "유후인 긴린코", "jp": "金鱗湖", "category": "attraction", "days": ["11/13"], "lat": 33.2667196, "lng": 131.3690386, "time": "2-3시간", "cost": "입장 무료, 식음·주차 별도", "fit": "부모 만족도가 높은 산책 후보. 아이는 간식·상점 중심으로 짧게.", "note": "사파리와 같은 날 모두 넣으면 과밀해지므로 대체 후보로 표시.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "Lake Kinrin Yufuin", "source": "Nominatim/OpenStreetMap"}, {"id": "umitamago", "name": "우미타마고 수족관", "jp": "うみたまご", "category": "attraction", "days": ["11/14"], "lat": 33.2589685, "lng": 131.5356401, "time": "2-3시간", "cost": "가족 약 ¥7,800-9,000", "fit": "비가 와도 안정적인 가족 일정. 귀국 전날 오전 코스로 좋다.", "note": "다카사키야마와 도보권이라 반나절 묶음이 깔끔하다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "Oita Marine Palace Aquarium Umitamago", "source": "Visit Oita, Nominatim"}, {"id": "takasakiyama", "name": "다카사키야마 자연동물원", "jp": "高崎山自然動物園", "category": "attraction", "days": ["11/14"], "lat": 33.2582589, "lng": 131.5327928, "time": "1-1.5시간", "cost": "입장 가족 약 ¥1,560 + 모노레일 별도", "fit": "짧고 강한 동물 관찰 코스. 안전수칙만 지키면 아이 반응이 좋다.", "note": "원숭이와 거리 유지. 먹이 시간대를 현장 확인.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Macaca_fuscata_in_Takasakiyama_Natural_Zoological_Garden_2011-03-20.jpg/960px-Macaca_fuscata_in_Takasakiyama_Natural_Zoological_Garden_2011-03-20.jpg", "googleQuery": "Takasakiyama Natural Zoological Garden", "source": "Visit Oita, Nominatim"}, {"id": "suginoi", "name": "Suginoi Hotel", "jp": "杉乃井ホテル", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2841003, "lng": 131.4728661, "time": "벳푸 3박 후보", "cost": "가족 리조트형: 대략 ¥45,000-90,000+/박", "fit": "수영·온천·뷔페가 강해 아이 동반 실패 확률이 낮다.", "note": "역세권은 아니라 셔틀/택시 동선 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Suginoi Hotel Beppu", "source": "Official hotel, Nominatim"}, {"id": "grand_mercure", "name": "Grand Mercure Beppu Bay", "jp": "グランドメルキュール別府湾", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.35619, "lng": 131.49838, "time": "벳푸/히지 리조트 후보", "cost": "대략 ¥35,000-70,000+/박", "fit": "베이뷰와 주차 편의. 렌트 병행 시 효율이 좋다.", "note": "벳푸 중심부와 거리가 있어 대중교통만으로는 불편할 수 있다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "Grand Mercure Beppu Bay Resort and Spa", "source": "Accor official GPS coordinates"}, {"id": "kamenoi", "name": "Kamenoi Hotel Beppu", "jp": "亀の井ホテル 別府", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2765191, "lng": 131.4998512, "time": "역세권 가성비 후보", "cost": "패밀리룸/2실: 대략 ¥25,000-55,000+/박", "fit": "4베드·6베드 객실이 있어 가족 4인 구조가 좋다.", "note": "연식과 혼잡도는 감안.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Kamenoi Hotel Beppu", "source": "Kamenoi official, Nominatim"}, {"id": "nono", "name": "Onyado Nono Beppu", "jp": "御宿 野乃別府", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2797839, "lng": 131.5016827, "time": "벳푸역 1분 후보", "cost": "가족: 대략 ¥35,000-80,000+/박", "fit": "역 접근, 대욕장, 일본식 분위기. 조기 매진 가능성이 있다.", "note": "4인 객실 여부와 주차비 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Onyado Nono Beppu", "source": "Nominatim/OpenStreetMap"}, {"id": "amanek", "name": "AMANEK Beppu YULA-RE", "jp": "アマネク別府ゆらり", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2803653, "lng": 131.5023706, "time": "역세권 현대식 호텔", "cost": "가족: 대략 ¥30,000-70,000+/박", "fit": "루프탑 온천/풀, 현대적 시설, 역 접근성이 좋다.", "note": "4인 1실 객실 가능 여부를 먼저 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "AMANEK Beppu YULA-RE", "source": "AMANEK official, Nominatim"}, {"id": "nishitetsu", "name": "Nishitetsu Resort Inn Beppu", "jp": "西鉄リゾートイン別府", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2804214, "lng": 131.5063396, "time": "기타하마 예산형 후보", "cost": "2실 전략: 대략 ¥22,000-45,000+/박", "fit": "저렴하고 위치가 좋다. 객실은 작아 2실 전제가 현실적.", "note": "가족 4인 1실보다 2실 비교.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "Nishitetsu Resort Inn Beppu", "source": "Nominatim/OpenStreetMap"}, {"id": "ana_ic", "name": "ANA InterContinental Beppu", "jp": "ANAインターコンチネンタル別府", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.3228, "lng": 131.4625, "time": "럭셔리 리조트 1박 후보", "cost": "가족: 대략 ¥90,000-180,000+/박", "fit": "전망·온천·서비스가 강한 프리미엄 선택지. 부모 만족도 최고급.", "note": "좌표는 공식 주소 기반 근사값. Google 검색 링크로 최종 위치 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "ANA InterContinental Beppu Resort and Spa", "source": "IHG/ANA IC official address", "approx": true}, {"id": "kai_beppu", "name": "Hoshino Resorts KAI Beppu", "jp": "界 別府", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.279452, "lng": 131.507016, "time": "고급 료칸 1박 후보", "cost": "가족: 대략 ¥100,000-220,000+/박", "fit": "오션뷰와 가이세키, 호시노 계열 온천 체험. 1박 포인트로 적합.", "note": "아동 식사/침구 포함 요금 구조 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Hoshino Resorts KAI Beppu", "source": "Hoshino Resorts official, NAVITIME coordinates"}, {"id": "kannawaen", "name": "Kannawaen", "jp": "山荘 神和苑 / Kannawaen", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.316377, "lng": 131.4711985, "time": "프라이빗 온천 료칸", "cost": "전용탕 객실: 대략 ¥120,000-250,000+/박", "fit": "지옥순례 접근과 객실 온천이 강점. 조용한 고급 체류.", "note": "가족 4인 객실·식사 시간 고정 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Umi_Jigoku_(Sea_Hell)_in_Beppu.jpg", "googleQuery": "Kannawaen Beppu", "source": "Nominatim/OpenStreetMap"}, {"id": "hana", "name": "Hana Beppu", "jp": "花べっぷ", "category": "hotel", "days": ["11/11", "11/12", "11/13"], "lat": 33.2824, "lng": 131.4958, "time": "JR Kyushu 계열 료칸", "cost": "가족: 대략 ¥55,000-120,000+/박", "fit": "벳푸역 서쪽 도보권, 42㎡ 이상 4인 객실 노출. 차분한 료칸형.", "note": "좌표는 공식 주소 기반 근사값. 2026 리뉴얼/휴관일 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "Hana Beppu 16-50 Kamitanoyumachi", "source": "Hana Beppu/JR Kyushu official address", "approx": true}, {"id": "oita_fragrance", "name": "오이타 향기 박물관", "jp": "大分香りの博物館", "category": "museum", "days": ["11/12"], "lat": 33.3119524, "lng": 131.4888527, "time": "60-90분", "cost": "성인 약 ¥700, 초중생 약 ¥300; 조향 체험 별도", "fit": "비 오는 날 대체 일정으로 좋고, 향수 만들기 체험은 8세·6세에게 기억 포인트가 될 수 있다.", "note": "칸나와/유케무리 전망대와 가까워 지옥순례 후 1시간짜리 실내 후보로 배치.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "오이타 향기 박물관 Beppu", "source": "Visit Oita, Good Luck Trip, Nominatim"}, {"id": "bamboo_center", "name": "벳푸 죽세공 전통산업회관", "jp": "別府市竹細工伝統産業会館", "category": "museum", "days": ["11/12"], "lat": 33.2979682, "lng": 131.4848992, "time": "60-90분", "cost": "성인 약 ¥390, 초중생 약 ¥130; 체험 별도", "fit": "벳푸 지역 공예를 보는 교육형 실내 후보. 조용히 관람 가능한 아이에게 적합하다.", "note": "작은 체험 프로그램은 사전 예약 여부를 확인.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "벳푸 죽세공 전통산업회관", "source": "Visit Oita, Japan Travel, Nominatim"}, {"id": "opam", "name": "오이타 현립미술관 OPAM", "jp": "大分県立美術館", "category": "museum", "days": ["11/14"], "lat": 33.23961, "lng": 131.60193, "time": "1.5-2.5시간", "cost": "전시별 변동", "fit": "우미타마고 이후 비가 오거나 체력이 남을 때 넣을 수 있는 실내 문화 후보.", "note": "벳푸에서 후쿠오카로 바로 올라가는 날에는 과밀할 수 있어 우천 대체안으로만 추천.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "오이타 현립미술관 OPAM", "source": "Visit Oita, Nominatim"}, {"id": "fukuoka_science", "name": "후쿠오카시 과학관", "jp": "福岡市科学館", "category": "museum", "days": ["11/14", "11/15"], "lat": 33.5773528, "lng": 130.3779288, "time": "1.5-3시간", "cost": "기본전시/돔시어터 별도", "fit": "후쿠오카 전박 후 비는 시간에 넣기 좋은 과학관. 체험형 전시와 플라네타리움이 장점.", "note": "오전 귀국편이면 11/15에는 무리하지 말고 11/14 저녁 이전 후보로만 검토.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "후쿠오카시 과학관", "source": "Fukuoka City Science Museum, Crossroad Fukuoka, Nominatim"}, {"id": "shidaka_lake", "name": "시다카호", "jp": "志高湖", "category": "scenic", "days": ["11/13"], "lat": 33.2635034, "lng": 131.4555017, "time": "45-90분", "cost": "산책 무료, 보트/주차 별도 가능", "fit": "렌트일에 짧게 붙일 수 있는 호수 산책·사진 후보. 아이가 뛰기 좋다.", "note": "사파리와 키지마를 모두 넣지 않는 날, 여백을 채우는 명승 후보.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "시다카호 벳푸", "source": "Nominatim/OpenStreetMap"}, {"id": "jumonjibaru", "name": "주몬지바루 전망대", "jp": "十文字原展望台", "category": "scenic", "days": ["11/13"], "lat": 33.3297759, "lng": 131.460256, "time": "20-40분", "cost": "무료", "fit": "벳푸만과 도시를 보는 짧은 전망 포인트. 이동 중 사진 정차지로 적합하다.", "note": "야경 후보지만 아이 동반이면 해지기 전 또는 저녁 초입만 권장.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "주몬지바루 전망대 벳푸", "source": "Nominatim/OpenStreetMap"}, {"id": "toyotsune_honten", "name": "토요츠네 본점", "jp": "お食事処 とよ常 別府本店", "category": "food", "days": ["11/11", "11/12"], "lat": 33.279755, "lng": 131.507001, "time": "점심/저녁", "cost": "덴동·토리텐 중심 ¥1,000-2,500대", "fit": "벳푸 대표 덴동·토리텐 후보. 관광객과 가족 모두 접근성이 좋다.", "note": "화·수 휴무 가능성이 있어 방문 전 Google 지도/공식 정보 재확인.", "rating": "Tripadvisor 4.1 / 424+", "reviewSummary": "후기는 특상 덴동, 토리텐, 신선한 생선 메뉴가 반복적으로 언급된다. 인기점이라 대기 가능성이 높다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "토요츠네 본점 벳푸", "source": "Tripadvisor, Tabelog, NAVITIME"}, {"id": "kamesho_sushi", "name": "카메쇼 쿠루쿠루 스시", "jp": "亀正くるくる寿司", "category": "food", "days": ["11/12", "11/13"], "lat": 33.31208128401862, "lng": 131.48417037252136, "time": "점심/저녁", "cost": "초밥 ¥2,000-4,000대; 현금 위주 정보 확인", "fit": "Google 계열 공개 리뷰 수가 매우 많은 초밥 후보. 아이들도 먹을 메뉴가 넓다.", "note": "예약 불가·대기 길다는 후기가 반복된다. 오픈 전 대기표 전략이 필요하다.", "rating": "Google 4.2 / 3,600+", "reviewSummary": "두꺼운 생선, 신선한 재료, 가성비가 강점으로 반복된다. 단점은 긴 대기와 매진 가능성.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "카메쇼 쿠루쿠루 스시 벳푸", "source": "Wanderlog indexed Google reviews, Tabelog, Toku-P"}, {"id": "robata_jin", "name": "로바타 진", "jp": "ろばた仁", "category": "food", "days": ["11/11", "11/13"], "lat": 33.2793919, "lng": 131.5058223, "time": "저녁", "cost": "이자카야형, 가족 ¥8,000-18,000+", "fit": "구이·지역 메뉴가 강한 인기 이자카야. 부모 식사 만족도가 높다.", "note": "술집 분위기라 아이 동반은 이른 저녁, 짧은 식사로 설계.", "rating": "Google 4.2 / 1,000+", "reviewSummary": "숯불구이, 지역 특선, 활기 있는 분위기와 합리적 가격이 자주 언급된다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "로바타 진 벳푸", "source": "Wanderlog indexed Google reviews, Nominatim"}, {"id": "kaisen_izutsu", "name": "카이센 이즈츠", "jp": "海鮮いづつ", "category": "food", "days": ["11/11", "11/14"], "lat": 33.2765278, "lng": 131.5048611, "time": "점심/저녁", "cost": "해산물덮밥·사시미 ¥1,000-3,500대", "fit": "벳푸역권 신선한 해산물 후보. 우미타마고 전후 식사 동선에도 맞다.", "note": "영어 메뉴가 약하다는 후기가 있어 사진 메뉴/번역 앱 준비.", "rating": "Tripadvisor/Navitime 3.9 / 140+", "reviewSummary": "신선한 사시미, 해산물덮밥, 합리적 가격이 반복된다. 현지식 분위기가 강점이자 진입장벽.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "카이센 이즈츠 벳푸", "source": "Tripadvisor, NAVITIME, DeepExperience"}, {"id": "amamichaya", "name": "아마미차야", "jp": "甘味茶屋", "category": "food", "days": ["11/12"], "lat": 33.3105721, "lng": 131.4866423, "time": "점심/간식", "cost": "단고지루·토리텐 세트 ¥1,000-2,500대", "fit": "향토식·디저트가 있어 가족 점심으로 안정적이다.", "note": "지옥순례·향기박물관·카메쇼 스시와 같은 생활권.", "rating": "Google 4.3 / 약 2,000", "reviewSummary": "단고지루, 토리텐, 단팥·떡 디저트, 따뜻한 분위기가 자주 언급된다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "아마미차야 벳푸", "source": "Mindtrip indexed Google reviews, Tripadvisor, Nominatim"}, {"id": "rokusei", "name": "로쿠세이 냉면", "jp": "六盛", "category": "food", "days": ["11/14"], "lat": 33.2724566, "lng": 131.5062601, "time": "점심", "cost": "냉면·온면 ¥1,000-2,000대", "fit": "벳푸식 냉면을 한 번 경험하기 좋은 로컬 음식 후보.", "note": "면 식감과 국물 호불호가 있어 아이는 온면/사이드 선택지를 같이 고려.", "rating": "Google 3.9 / 1,200+", "reviewSummary": "쫄깃한 면, 맑은 국물, 갈비/스페어립이 언급된다. 일부는 면이 단단하거나 국물이 짜다고 평가.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "로쿠세이 벳푸 냉면", "source": "Wanderlog indexed Google reviews, Nominatim"}, {"id": "somuri", "name": "분고규 스테이크 소무리", "jp": "豊後牛ステーキの店 そむり", "category": "food", "days": ["11/13"], "lat": 33.2779542, "lng": 131.5043762, "time": "저녁", "cost": "스테이크 중심, 가족 ¥15,000-40,000+", "fit": "부모 만족도 높은 분고규 후보. 여행 중 한 끼를 고급으로 잡을 때 적합.", "note": "아이 메뉴와 예약 가능 여부 확인. 예산은 다른 후보보다 높다.", "rating": "Google 4.3 / 700+", "reviewSummary": "분고규 품질, 굽기, 친절한 서비스가 강점. 식사 속도·가격에는 일부 혼재된 의견.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "소무리 스테이크 벳푸", "source": "Wanderlog indexed Google reviews, Somuri official, Nominatim"}, {"id": "tomonaga_panya", "name": "토모나가 빵집", "jp": "友永パン屋", "category": "food", "days": ["11/14"], "lat": 33.274585, "lng": 131.5040896, "time": "아침/간식", "cost": "빵 간식 ¥500-1,500대", "fit": "아이 아침·간식으로 실패 확률이 낮은 전통 빵집 후보.", "note": "줄이 생길 수 있어 11/14 이동 전 간단히 들르는 정도로 설계.", "rating": "Tripadvisor 4.4 / 130+; Tabelog 650+", "reviewSummary": "저렴하고 맛있는 빵, 오래된 분위기, 크림·초코·단팥류가 반복적으로 언급된다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "토모나가 빵집 벳푸", "source": "Tripadvisor, Tabelog, Nominatim"}, {"id": "fuk_rental_counter", "name": "후쿠오카공항 렌터카 카운터", "jp": "福岡空港レンタカーカウンター", "category": "rental", "days": ["11/11", "11/15"], "lat": 33.5848221, "lng": 130.4442945, "time": "국제선 1층 카운터", "cost": "Toyota/Nippon/Times/ORIX/Nissan 등; 차량별 변동", "fit": "전 일정 렌트 시 수령 지점. 다만 귀국일 오전 반납 리스크가 있다.", "note": "초행 가족은 공항-벳푸 전 일정 렌트보다 벳푸 1일 렌트가 부담이 낮다.", "googleQuery": "후쿠오카공항 국제선 렌터카 카운터", "source": "Fukuoka Airport official"}, {"id": "toyota_beppu_station", "name": "Toyota 렌터카 벳푸역", "jp": "トヨタレンタカー 別府駅前", "category": "rental", "days": ["11/13"], "lat": 33.2789, "lng": 131.4992, "time": "08:00-20:00 전후", "cost": "컴팩트 ¥9,000대부터, 미니밴/보상 포함 시 상승", "fit": "11/13 사파리·로프웨이용 1일 렌트의 1순위 거점.", "note": "카시트/부스터 1-2개와 짐 공간을 고려하면 야리스급보다 루미/시엔타급 이상이 편하다.", "googleQuery": "Toyota Rent a Car Beppu Station", "source": "Rakuten Travel, Tabirai, Jcation", "approx": true}, {"id": "times_beppu_station", "name": "Times 렌터카 벳푸역", "jp": "タイムズカー 別府駅前", "category": "rental", "days": ["11/13"], "lat": 33.2806, "lng": 131.5011, "time": "09:00-17:00 전후", "cost": "미니밴 ¥7,700대부터 노출 사례", "fit": "벳푸역 도보권 대안. 반납 시간이 짧아 일정 종료 시각을 보수적으로 잡아야 한다.", "note": "17시 영업 종료 기준이면 사파리+로프웨이 과밀 일정은 위험.", "googleQuery": "Times Car Rental Beppu Station", "source": "Times Car Rental, Rakuten Travel", "approx": true}, {"id": "nippon_beppu_port", "name": "Nippon 렌터카 벳푸 관광항", "jp": "ニッポンレンタカー 別府観光港前", "category": "rental", "days": ["11/13"], "lat": 33.29817021, "lng": 131.5019733, "time": "영업시간 확인 필요", "cost": "차급·보상·편도반납 여부별 변동", "fit": "벳푸역권 차량이 없을 때 대안. 택시로 이동해 수령하는 방식.", "note": "역에서 떨어져 있으므로 수령·반납 택시 시간을 포함.", "googleQuery": "Nippon Rent a Car Beppu Kankoukou-mae", "source": "Tabirai, QEEQ"}, {"id": "fukuoka_tower", "name": "후쿠오카 타워", "jp": "福岡タワー", "category": "scenic", "days": ["11/14", "11/15"], "lat": 33.5932744, "lng": 130.3514862, "time": "45-75분", "cost": "전망대 입장료 별도", "fit": "후쿠오카 시내·하카타만을 한눈에 보는 전망 후보. 모모치 해변, 시립박물관과 묶기 쉽다.", "note": "공식 관광 가이드는 상부 전망대에서 360도 야경을 볼 수 있다고 소개한다. 귀국 전에는 사진만 짧게.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "福岡タワー", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "momochi_seaside", "name": "시사이드 모모치 해변공원", "jp": "シーサイドももち海浜公園", "category": "scenic", "days": ["11/14", "11/15"], "lat": 33.5948717, "lng": 130.3507794, "time": "30-60분", "cost": "산책 무료", "fit": "아이들이 짧게 걷고 사진 찍기 좋은 해변 산책 후보. 타워·박물관과 같은 권역.", "note": "바닷바람이 강하면 체감온도가 낮다. 11월에는 겉옷 준비.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "シーサイドももち海浜公園", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "fukuoka_city_museum", "name": "후쿠오카시 박물관", "jp": "福岡市博物館", "category": "museum", "days": ["11/14", "11/15"], "lat": 33.5897337, "lng": 130.353073, "time": "60-120분", "cost": "상설/특별전별 변동", "fit": "비 오는 날 또는 체력 소모를 줄이고 싶은 날의 역사·문화 실내 후보.", "note": "후쿠오카 타워·모모치 해변과 가까워 한 권역으로 움직이면 동선이 깔끔하다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "福岡市博物館", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "teamlab_forest", "name": "팀랩 포레스트 후쿠오카", "jp": "teamLab Forest Fukuoka", "category": "museum", "days": ["11/14", "11/15"], "lat": 33.5954748, "lng": 130.3637068, "time": "60-120분", "cost": "예약/일자별 변동", "fit": "초등 저학년 아이들에게 반응이 좋은 몰입형 디지털 전시. 비 오는 날 대체안으로 강하다.", "note": "공식 관광 가이드는 어린이와 성인 모두에게 적합한 인터랙티브 전시로 소개한다. 사전 예매 권고.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "teamLab Forest Fukuoka", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "ohori_park", "name": "오호리 공원", "jp": "大濠公園", "category": "scenic", "days": ["11/14", "11/15"], "lat": 33.5861214, "lng": 130.3763612, "time": "45-90분", "cost": "산책 무료, 보트 등 별도", "fit": "연못 둘레 산책, 카페, 미술관 연결이 가능한 후쿠오카 대표 공원. 아이 체력 조절용으로 좋다.", "note": "공식 관광 가이드는 옛 후쿠오카성 외호였고 1929년 공원으로 개장한 수변공원으로 설명한다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "大濠公園 福岡", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "fukuoka_art_museum", "name": "후쿠오카시 미술관", "jp": "福岡市美術館", "category": "museum", "days": ["11/14", "11/15"], "lat": 33.583939, "lng": 130.3797313, "time": "60-120분", "cost": "상설/특별전별 변동", "fit": "오호리 공원 산책과 실내 관람을 결합할 수 있는 후보. 부모 만족도가 상대적으로 높다.", "note": "전시 성격에 따라 아이 반응 편차가 있으므로 비 오는 날·짧은 관람 후보로 배치.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "福岡市美術館", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "fukuoka_castle", "name": "후쿠오카성터·마이즈루공원", "jp": "福岡城跡・舞鶴公園", "category": "scenic", "days": ["11/14", "11/15"], "lat": 33.584362, "lng": 130.384971, "time": "45-90분", "cost": "공원 산책 무료", "fit": "성곽 흔적과 공원을 함께 보는 역사 산책 후보. 오호리 공원 동선에 붙이기 쉽다.", "note": "공식 관광 가이드는 마이즈루공원이 후쿠오카성터와 고로칸 유적을 품은 도심 역사 권역이라고 설명한다.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Panorama_of_Beppu_City.JPG", "googleQuery": "福岡城跡 舞鶴公園", "source": "Fukuoka City Official Tourist Guide", "approx": true}, {"id": "kushida_shrine", "name": "쿠시다 신사", "jp": "櫛田神社", "category": "attraction", "days": ["11/14", "11/15"], "lat": 33.59307, "lng": 130.4106837, "time": "30-50분", "cost": "참배 무료", "fit": "하카타 구시가지 분위기를 짧게 느끼는 문화 후보. 캐널시티·하카타역과 가까워 귀국 전 동선도 가능.", "note": "혼잡하면 사진과 짧은 참배만 하고 식사 동선으로 전환.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "櫛田神社 福岡", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "canal_city", "name": "캐널시티 하카타", "jp": "キャナルシティ博多", "category": "attraction", "days": ["11/14", "11/15"], "lat": 33.5896715, "lng": 130.411141, "time": "60-120분", "cost": "쇼핑/식사별 변동", "fit": "비·추위·체력 저하 시 안전한 쇼핑몰형 후보. 라멘 스타디움 등 식사 선택지도 많다.", "note": "주말 저녁은 혼잡할 수 있어 식사는 예약 가능점 또는 이른 시간 권고.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "キャナルシティ博多", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "tochoji", "name": "도초지", "jp": "東長寺", "category": "attraction", "days": ["11/14", "11/15"], "lat": 33.5952317, "lng": 130.4138692, "time": "30-45분", "cost": "참배 무료", "fit": "하카타역 근처에서 짧게 넣는 역사·사찰 후보. 이동 피로가 큰 날에도 부담이 작다.", "note": "쿠시다 신사, 하카타 구시가지와 묶어 1시간 안팎으로 조절 가능.", "image": "https://commons.wikimedia.org/wiki/Special:Redirect/file/Beppu_Hot_Springs_(31338411912).jpg", "googleQuery": "東長寺 福岡", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "yanagibashi_market", "name": "야나기바시 연합시장", "jp": "柳橋連合市場", "category": "food", "days": ["11/14", "11/15"], "lat": 33.5830623, "lng": 130.4085274, "time": "45-75분", "cost": "간식·식재료별 변동", "fit": "명란, 해산물, 과일, 간식 등을 보는 도심 시장 후보. 길지 않은 체험형 식사 동선.", "note": "일요일·오후에는 문 닫은 점포가 있을 수 있어 11/14 낮 후보가 더 낫다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "柳橋連合市場 福岡", "source": "Fukuoka City Official Tourist Guide, Nominatim"}, {"id": "marine_world", "name": "마린월드 우미노나카미치", "jp": "マリンワールド海の中道", "category": "attraction", "days": ["11/14"], "lat": 33.661407, "lng": 130.36335, "time": "2-3시간", "cost": "입장료 별도", "fit": "아이 만족도가 높은 수족관 후보. 다만 후쿠오카 동쪽 외곽이라 귀국 전 짧은 시간에는 비권고.", "note": "11/14 후쿠오카 전박 후 시간이 넉넉할 때만. 우미타마고를 이미 보므로 중복 여부를 판단.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dc/Umitamago.jpg/960px-Umitamago.jpg", "googleQuery": "マリンワールド海の中道", "source": "Crossroad Fukuoka, Nominatim"}, {"id": "uminonakamichi_park", "name": "우미노나카미치 해변공원", "jp": "海の中道海浜公園", "category": "scenic", "days": ["11/14"], "lat": 33.664476, "lng": 130.365643, "time": "2-4시간", "cost": "입장료·대여료 별도", "fit": "넓은 공원·자전거·놀이터형 후보. 날씨가 좋고 하루 여유가 있을 때 강하다.", "note": "동선이 길어 이번 4박5일에서는 예비 후보. 마린월드와 묶을 때만 현실적이다.", "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg/960px-Lake_Kinrin_in_Yufuin%2C_Oita_-_Aug_24%2C_2018_%281%29.jpg", "googleQuery": "海の中道海浜公園", "source": "Crossroad Fukuoka, Nominatim"}];
+    const DAYS = [{"id": "11/11", "label": "11/11 수", "title": "도착 · 벳푸 이동", "route": ["fuk_airport", "hakata", "beppu_station", "suginoi"], "summary": "12:30 FUK 도착 후 벳푸로 이동, 숙소 체크인과 온천.", "mode": "대중교통 우선"}, {"id": "11/12", "label": "11/12 목", "title": "칸나와 · 지옥순례", "route": ["beppu_station", "umi_jigoku", "kamado_jigoku", "jigokumushi", "yukemuri", "beppu_station"], "summary": "온천 지형을 보는 핵심일. 택시+버스 조합이 충분하다.", "mode": "대중교통/택시"}, {"id": "11/13", "label": "11/13 금", "title": "외곽 관광 · 1일 렌트", "route": ["beppu_station", "toyota_beppu_station", "african_safari", "ropeway", "toyota_beppu_station", "beppu_station"], "summary": "사파리를 주 일정으로 두고, 날씨가 좋으면 로프웨이를 추가.", "mode": "렌트 권장"}, {"id": "11/14", "label": "11/14 토", "title": "우미타마고 · 후쿠오카 복귀", "route": ["beppu_station", "umitamago", "takasakiyama", "hakata"], "summary": "반나절 동물/수족관 후 후쿠오카 전박.", "mode": "대중교통 또는 렌트 반납"}, {"id": "11/15", "label": "11/15 일", "title": "귀국", "route": ["hakata", "fuk_airport"], "summary": "오전 항공 기준 공항 08:20-08:30 도착 목표.", "mode": "택시/지하철"}];
+    const HOTEL_ROWS = [["Suginoi Hotel", "대형 온천 리조트", "아이 만족도, Aqua Garden/뷔페", "중-상", "가족 리조트 1순위"], ["Grand Mercure Beppu Bay", "Accor 계열 베이 리조트", "렌트 병행, 베이뷰, 주차", "중", "시내 접근은 약점"], ["Kamenoi Hotel Beppu", "역세권 패밀리룸", "4-6베드 객실, 가격 안정성", "중-하", "가성비 기준 강함"], ["Onyado Nono Beppu", "Dormy Inn 프리미엄", "벳푸역 1분, 온천, 조식", "중", "조기 매진 가능"], ["AMANEK Beppu YULA-RE", "현대식 온천 호텔", "루프탑 온천/풀, 접근성", "중", "4인 객실 확인"], ["ANA InterContinental", "IHG 럭셔리", "전망·서비스·부모 만족도", "상", "특별한 1박"], ["KAI Beppu", "호시노 고급 료칸", "오션뷰, 가이세키, 문화 체험", "상", "료칸 체험 1순위"], ["Kannawaen", "프라이빗 온천 료칸", "객실 온천, 지옥순례 접근", "상", "고가·식사시간 고정"], ["Hana Beppu", "JR Kyushu 계열 료칸", "역 도보권, 4인 객실 노출", "중-상", "차분한 료칸"]];
+    const FOOD_ROWS = [["카메쇼 쿠루쿠루 스시", "Google 4.2 / 3,600+", "두꺼운 생선·신선도·가성비가 강점. 긴 대기와 매진 가능성.", "11/12 또는 11/13 점심", "오픈 전 대기표 전략"], ["아마미차야", "Google 4.3 / 약 2,000", "단고지루·토리텐·디저트, 따뜻한 분위기. 가족 점심 안정성이 높음.", "11/12 점심", "지옥순례 후 이동"], ["로바타 진", "Google 4.2 / 1,000+", "숯불구이와 지역 메뉴, 활기 있는 이자카야 분위기.", "11/11 또는 11/13 저녁", "아이 동반은 이른 시간"], ["로쿠세이 냉면", "Google 3.9 / 1,200+", "쫄깃한 면·맑은 국물. 호불호가 있어 로컬 음식 체험으로 접근.", "11/14 점심", "우미타마고 후 후보"], ["소무리 스테이크", "Google 4.3 / 700+", "분고규 품질과 서비스가 강점. 가격은 높은 편.", "11/13 저녁", "부모 만족도 높은 1식"], ["토요츠네 본점", "Tripadvisor 4.1 / 424+", "덴동·토리텐·해산물 중심. 유명점이라 대기 가능.", "11/11 저녁 또는 11/12", "화·수 휴무 확인"], ["카이센 이즈츠", "Tripadvisor/Navitime 3.9 / 140+", "해산물덮밥·사시미, 현지식 분위기. 영어 메뉴 약할 수 있음.", "11/14 점심", "번역 앱 준비"], ["토모나가 빵집", "Tripadvisor 4.4 / 130+; Tabelog 650+", "저렴한 전통 빵집, 아이 간식용 안정 후보.", "11/14 오전", "줄이 길면 생략"], ["원조 하카타 멘타이쥬", "Google 3.9 / 6,000+; Tripadvisor 3.9 / 200+", "명란 덮밥·츠케멘으로 리뷰 수가 압도적. 맛은 강하지만 가격·대기에는 호불호가 있음.", "11/14 저녁 또는 11/15 아침", "명란을 꼭 먹고 싶을 때"], ["하카타 라멘 신신 DEITOS", "Tripadvisor 4.0 / 270+", "하카타역 안 접근성, 얇은 면·돈코츠 국물·빠른 회전이 장점. 줄은 상시 가능.", "11/14 늦은 저녁 또는 11/15", "공항 전 마지막 식사 후보"], ["하카타 모츠나베 야마나카", "Tripadvisor 약 4.3-4.4 / 다수", "미소 모츠나베로 유명. 맛과 서비스 평은 좋지만 2인분 이상 주문·예약 필요성이 큼.", "11/14 저녁", "아이 입맛은 편차 있어 우동 사리 활용"]];
+    const RENTAL_ROWS = [["권고안", "벳푸 1일 렌트", "11/13 벳푸역 수령 → 사파리/로프웨이/시다카호 → 벳푸역 반납", "운전 부담·귀국일 리스크·비용의 균형이 가장 좋다."], ["전 일정 렌트", "FUK 국제선 수령/반납", "11/11 공항 수령 → 벳푸 3박 → 11/14 후쿠오카 반납 또는 11/15 공항 반납", "짐은 편하지만 좌측통행, 통행료, 주차, 오전 귀국 반납 지연 위험이 있다."], ["차급", "소형보다 컴팩트+ 또는 미니밴", "성인 2명 + 8세 + 6세 + 캐리어 2-3개", "카시트/부스터를 넣으면 5인승 소형차는 트렁크와 뒷좌석이 빡빡하다."], ["아동 시트", "6세는 법적/실무상 확인 필수", "일본 법은 6세 미만 의무. 6세 이상도 140-150cm 미만은 부스터 권고.", "예약 단계에서 부스터/주니어시트를 미리 지정."], ["필수 준비", "국제운전면허증 + 한국면허증 + 여권 + 신용카드", "ETC 카드 대여, 면책보상, NOC 보상 여부 확인", "한국 출국 전 IDP 발급 여부를 반드시 확인."]];
+    const HISTORY_ROWS = [["온천 도시의 핵심", "벳푸는 작은 시역 안에 8개 온천지, 즉 벳푸핫토가 모여 있고 도시 곳곳에서 수증기가 보이는 온천 도시다.", "11/12 지옥순례와 칸나와 산책의 해설 축"], ["지옥순례의 의미", "‘지옥’은 입욕용보다 관람용에 가까운 고온 온천·열수 지형이다. 색, 점토, 증기, 분출 형태가 달라 아이들에게 지질 체험처럼 설명하기 좋다.", "우미지옥·가마도지옥 위주로 압축"], ["칸나와의 생활문화", "칸나와 일대는 온천 증기를 조리·난방·관광에 활용해 온 지역으로, 지고쿠무시는 그 생활문화가 음식 체험으로 바뀐 대표 사례다.", "점심은 지고쿠무시 또는 아마미차야"], ["죽세공의 전통", "벳푸 죽세공은 온천 관광과 함께 기념품·생활용품으로 발달했고, 현재는 일본 전통공예로 보존·전시된다.", "죽세공 전통산업회관을 60-90분 실내 후보로 배치"]];
+    const SPECIALTY_ROWS = [["벳푸 죽세공", "대나무 바구니·소품·인테리어 공예", "가볍고 파손 위험이 낮은 소품 위주로 구매. 아이 체험은 사전 예약 여부 확인."], ["지고쿠무시", "온천 증기로 채소·계란·고기·해산물을 찌는 벳푸다운 음식 체험", "맛보다 체험 가치가 크다. 대기와 조리 시간을 일정에 반영."], ["벳푸 냉면", "쫄깃한 면과 차가운 국물이 특징인 로컬 면 요리", "호불호가 있어 4인이 모두 냉면을 시키기보다 나눠 먹는 방식 권장."], ["오이타 토리텐", "닭튀김을 간장·폰즈류와 먹는 오이타 대표 메뉴", "아이들이 먹기 쉬워 첫날 또는 점심 메뉴로 안정적."], ["분고규·해산물", "분고규 스테이크, 벳푸만/오이타 해산물, 세키아지·세키사바 계열", "예산을 쓰는 한 끼는 소무리 또는 해산물 후보로 집중."], ["카보스·유자후추", "오이타의 산미·향신료 계열 기념품", "공항·역 선물 코너에서 액체 용량과 수하물 규정 확인."]];
+    const MUST_EAT_ROWS = [["지고쿠무시", "지옥찜 공방 칸나와", "온천 도시 벳푸를 가장 직관적으로 느끼는 체험형 식사.", "11/12 점심 1순위"], ["토리텐", "토요츠네, 아마미차야", "오이타 대표 음식이고 아이들이 먹기 쉬워 실패 위험이 낮다.", "첫날 저녁 또는 11/12 점심"], ["단고지루·야세우마", "아마미차야", "향토식과 디저트를 동시에 경험할 수 있어 가족 점심 안정성이 높다.", "지옥순례 후"], ["벳푸 냉면", "로쿠세이", "벳푸식 면 요리 경험. 식감이 독특해 소량 체험으로 충분하다.", "11/14 점심 후보"], ["분고규", "소무리 스테이크", "부모 만족도가 높은 프리미엄 한 끼. 예산을 쓸 식사로 분리.", "11/13 저녁"], ["초밥·해산물덮밥", "카메쇼 스시, 카이센 이즈츠", "공개 리뷰 수가 많고 신선도 언급이 반복된다. 대기와 현금 결제 가능성 확인.", "오픈 직후"], ["온천 계란·푸딩", "칸나와·명반 온천권", "아이 간식으로 좋고 짧은 이동 중 보상처럼 넣기 쉽다.", "11/12 오후"], ["하카타 돈코츠 라멘", "신신 DEITOS, 하카타역/캐널시티권", "후쿠오카 대표 음식. 하카타역권은 귀국 전 접근성이 좋다.", "11/14 밤 또는 11/15"], ["명란", "원조 하카타 멘타이쥬, 야나기바시 시장, 공항 선물", "후쿠오카 특산 이미지가 강하다. 식사는 대기, 선물은 공항 구매가 편하다.", "11/14-15"], ["모츠나베·미즈타키", "야마나카 등 후쿠오카 시내 전문점", "어른 만족도가 높지만 아이 입맛 편차가 있다. 예약 가능한 저녁식사로만 추천.", "11/14 저녁"]];
+    const SOURCES = [["Visit Oita 벳푸 지옥순례", "https://oita-tourism.com/en/attractions/detail_1008.html"], ["Visit Oita 아프리칸 사파리", "https://oita-tourism.com/en/attractions/detail_1055.html"], ["Visit Oita 키지마 고원", "https://oita-tourism.com/en/attractions/detail_1009.html"], ["Visit Oita 우미타마고/다카사키야마", "https://oita-tourism.com/en/attractions/detail_1002.html"], ["벳푸 로프웨이 공식", "https://www.beppu-ropeway.co.jp/en/"], ["Kamenoi Hotel Beppu", "https://kamenoi-hotels.com/en/beppu/"], ["Suginoi Hotel", "https://global-suginoi.orixhotelsandresorts.com/"], ["Grand Mercure Beppu Bay", "https://all.accor.com/hotel/C1N6/index.en.shtml"], ["ANA InterContinental Beppu", "https://anaicbeppu.com/en/access/"], ["Hoshino Resorts KAI Beppu", "https://hoshinoresorts.com/en/hotels/kaibeppu/"], ["Hana Beppu", "https://www.hanabeppu.jp/"], ["OpenStreetMap/Nominatim", "https://www.openstreetmap.org/"], ["오이타 향기 박물관", "https://oita-tourism.com/en/attractions/detail_1011.html"], ["벳푸 죽세공 전통산업회관", "https://oita-tourism.com/en/attractions/detail_1159.html"], ["OPAM 오이타 현립미술관", "https://oita-tourism.com/en/attractions/detail_1003.html"], ["후쿠오카시 과학관", "https://www.fukuokacity-kagakukan.jp/use/english_guide.html"], ["Wanderlog Google-indexed restaurant reviews", "https://wanderlog.com/list/geoCategory/74105/where-to-eat-the-best-restaurants-in-beppu"], ["Fukuoka Airport rental car counters", "https://www.fukuoka-airport.jp/en/access/rent.html"], ["Toyota Rent a Car child seats", "https://rent.toyota.co.jp/sp/eng/reservation/accesories.aspx"], ["Times Car Rental Beppu Station", "https://www.timescar-rental.com/en/oita/shop/4404/"], ["Nippon Rent-A-Car wagon guidance", "https://www.nipponrentacar.co.jp/en/car_price/wagon.html"], ["Beppu Tabi official tourism", "https://beppu-tourism.com/en/"], ["Visit Oita 벳푸 죽세공", "https://oita-tourism.com/en/attractions/detail_1159.html"], ["Japan Travel 벳푸 죽세공", "https://www.japan.travel/en/spot/717/"], ["Fukuoka City Official Tourist Guide", "https://www.gofukuoka.jp/en/"], ["Fukuoka Tower / First-timers guide", "https://www.gofukuoka.jp/en/articles/detail/fd2b889b-7457-493b-b5e4-49e274ed87bb"], ["Fukuoka Castle and Korokan area", "https://www.gofukuoka.jp/en/articles/detail/4624b942-fa63-49fd-a479-033cb6a2a8dd"], ["Ohori Park official guide article", "https://gofukuoka.jp/en/articles/detail/3a3d54e1-5d8e-4a11-b537-6014ab9db989"], ["teamLab Forest official guide article", "https://gofukuoka.jp/en/articles/detail/d9982f61-370d-4dd0-b9b5-6516b855a294"], ["Crossroad Fukuoka family trip", "https://www.crossroadfukuoka.jp/en/articles/inboud-familytrip"], ["Wanderlog Ganso Hakata Mentaiju Google-indexed reviews", "https://wanderlog.com/place/details/543870/ganso-hakata-mentaiju-nishinakasu"], ["Tripadvisor Shin Shin Hakata Deitos", "https://www.tripadvisor.com/Restaurant_Review-g14127501-d6877061-Reviews-Shin_Shin_Hakata_Deitos-Hakata_Fukuoka_Fukuoka_Prefecture_Kyushu.html"], ["Good Luck Trip Hakata Motsunabe Yamanaka", "https://www.gltjp.com/en/directory/item/13261/"]];
+
+    const COLORS = {
+      attraction: '#d86b4a',
+      hotel: '#7c3aed',
+      transport: '#2563eb',
+      food: '#b5872f',
+      museum: '#be123c',
+      scenic: '#15803d',
+      rental: '#0891b2'
+    };
+    const ICONS = {
+      attraction: '★',
+      hotel: 'H',
+      transport: '↔',
+      food: '◎',
+      museum: 'M',
+      scenic: '◇',
+      rental: 'R'
+    };
+
+    let activeDay = 'all';
+    let activeCategory = 'all';
+    let searchTerm = '';
+    let selectedId = PLACES.find(p => p.id === 'umi_jigoku')?.id || PLACES[0].id;
+    let routeLayer = null;
+    let markerLayer = null;
+    const markers = new Map();
+
+    const map = L.map('map', { zoomControl: false, scrollWheelZoom: true }).setView([33.31, 131.20], 9);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    function markerIcon(place) {
+      const cls = `marker-${place.category}`;
+      return L.divIcon({
+        className: '',
+        html: `<div class="custom-marker ${cls}"><span>${ICONS[place.category] || '•'}</span></div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 30],
+        popupAnchor: [0, -28]
+      });
+    }
+
+    function googleSearchUrl(place) {
+      const query = place.googleQuery || `${place.lat},${place.lng}`;
+      return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    }
+
+    function dayRouteUrl(dayId) {
+      const day = DAYS.find(d => d.id === dayId) || DAYS[0];
+      const stops = day.route.map(id => PLACES.find(p => p.id === id)).filter(Boolean);
+      if (stops.length < 2) return 'https://www.google.com/maps';
+      const origin = `${stops[0].lat},${stops[0].lng}`;
+      const destination = `${stops[stops.length - 1].lat},${stops[stops.length - 1].lng}`;
+      const waypoints = stops.slice(1, -1).map(p => `${p.lat},${p.lng}`).join('|');
+      const mode = dayId === '11/13' ? 'driving' : 'transit';
+      const base = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${mode}`;
+      return waypoints ? `${base}&waypoints=${encodeURIComponent(waypoints)}` : base;
+    }
+
+    function visiblePlaces() {
+      return PLACES.filter(place => {
+        const dayOk = activeDay === 'all' || place.days.includes(activeDay);
+        const categoryOk = activeCategory === 'all' || place.category === activeCategory;
+        const text = `${place.name} ${place.jp} ${place.note} ${place.fit}`.toLowerCase();
+        const searchOk = !searchTerm || text.includes(searchTerm.toLowerCase());
+        return dayOk && categoryOk && searchOk;
+      });
+    }
+
+    function renderDays() {
+      const box = document.getElementById('dayButtons');
+      box.innerHTML = '';
+      const all = document.createElement('button');
+      all.className = `day-btn ${activeDay === 'all' ? 'active' : ''}`;
+      all.innerHTML = '<strong>전체</strong><span>모든 마커</span>';
+      all.onclick = () => { activeDay = 'all'; selectedId = visiblePlaces()[0]?.id || selectedId; renderAll(); };
+      box.appendChild(all);
+      DAYS.forEach(day => {
+        const btn = document.createElement('button');
+        btn.className = `day-btn ${activeDay === day.id ? 'active' : ''}`;
+        btn.innerHTML = `<strong>${day.label}</strong><span>${day.title}</span>`;
+        btn.onclick = () => { activeDay = day.id; selectedId = day.route[1] || day.route[0]; renderAll(); };
+        box.appendChild(btn);
+      });
+    }
+
+    function renderMarkers() {
+      const list = visiblePlaces();
+      if (markerLayer) markerLayer.remove();
+      markerLayer = L.layerGroup().addTo(map);
+      markers.clear();
+      list.forEach(place => {
+        const marker = L.marker([place.lat, place.lng], { icon: markerIcon(place), title: place.name })
+          .bindPopup(`<div class="popup-title">${place.name}</div><div>${place.time}</div><a class="popup-link" href="${googleSearchUrl(place)}" target="_blank" rel="noopener">Google 지도 열기</a>`);
+        marker.on('click', () => {
+          selectedId = place.id;
+          renderList();
+          renderDetail();
+        });
+        marker.addTo(markerLayer);
+        markers.set(place.id, marker);
+      });
+      renderRoute();
+      fitVisible(false);
+    }
+
+    function renderRoute() {
+      if (routeLayer) routeLayer.remove();
+      if (activeDay === 'all') return;
+      const day = DAYS.find(d => d.id === activeDay);
+      const coords = day.route.map(id => PLACES.find(p => p.id === id)).filter(Boolean).map(p => [p.lat, p.lng]);
+      routeLayer = L.polyline(coords, { color: '#0f766e', weight: 4, opacity: 0.76, dashArray: '7 7' }).addTo(map);
+    }
+
+    function fitVisible(force = true) {
+      const list = visiblePlaces();
+      if (!list.length) return;
+      const bounds = L.latLngBounds(list.map(p => [p.lat, p.lng]));
+      map.fitBounds(bounds.pad(0.18), { animate: force, maxZoom: activeDay === 'all' ? 10 : 13 });
+    }
+
+    function renderList() {
+      const list = visiblePlaces();
+      const box = document.getElementById('placeList');
+      box.innerHTML = '';
+      document.getElementById('visibleCount').textContent = `${list.length}곳`;
+      list.forEach(place => {
+        const card = document.createElement('article');
+        card.className = `place-card ${place.id === selectedId ? 'active' : ''}`;
+        const img = place.image ? `<img class="thumb" src="${place.image}" alt="${place.name}">` : '<div class="thumb"></div>';
+        card.innerHTML = `
+          ${img}
+          <div>
+            <h3>${place.name}</h3>
+            <div class="meta">
+              <span class="pill ${place.category}">${categoryLabel(place.category)}</span>
+              ${place.rating ? `<span class="pill">${place.rating}</span>` : ''}
+              ${place.days.slice(0, 2).map(d => `<span class="pill">${d}</span>`).join('')}
+              ${place.approx ? '<span class="pill">좌표 근사</span>' : ''}
+            </div>
+            <div class="small">${place.fit}</div>
+          </div>`;
+        card.onclick = () => {
+          selectedId = place.id;
+          const marker = markers.get(place.id);
+          if (marker) {
+            map.setView([place.lat, place.lng], 14, { animate: true });
+            marker.openPopup();
+          }
+          renderList();
+          renderDetail();
+        };
+        box.appendChild(card);
+      });
+    }
+
+    function categoryLabel(cat) {
+      return {
+        attraction: '관광',
+        scenic: '명승',
+        museum: '박물관/과학',
+        hotel: '숙소',
+        transport: '이동',
+        rental: '렌터카',
+        food: '식사'
+      }[cat] || cat;
+    }
+
+    function renderDetail() {
+      const place = PLACES.find(p => p.id === selectedId) || visiblePlaces()[0] || PLACES[0];
+      selectedId = place.id;
+      const panel = document.getElementById('detailPanel');
+      const day = activeDay === 'all' ? DAYS.find(d => d.id === place.days[0]) : DAYS.find(d => d.id === activeDay);
+      const routeHtml = day ? renderRouteBox(day) : '';
+      const image = place.image ? `<div class="detail-hero"><img src="${place.image}" alt="${place.name}"></div>` : '<div class="detail-hero"></div>';
+      const reviewHtml = place.reviewSummary ? `<div class="fact"><b>평점·리뷰 요약</b>${place.rating || '공개 검색 리뷰'} · ${place.reviewSummary}</div>` : '';
+      panel.innerHTML = `
+        ${image}
+        <div class="meta">
+          <span class="pill ${place.category}">${categoryLabel(place.category)}</span>
+          ${place.rating ? `<span class="pill">${place.rating}</span>` : ''}
+          ${place.days.map(d => `<span class="pill">${d}</span>`).join('')}
+          ${place.approx ? '<span class="pill">좌표 근사</span>' : ''}
+        </div>
+        <h2>${place.name}</h2>
+        <div class="small">${place.jp || ''}</div>
+        <div class="facts">
+          <div class="fact"><b>가족 적합성</b>${place.fit}</div>
+          <div class="fact"><b>소요·비용</b>${place.time} · ${place.cost}</div>
+          ${reviewHtml}
+          <div class="fact"><b>판단 메모</b>${place.note}</div>
+        </div>
+        <div class="top-actions">
+          <a class="btn primary" href="${googleSearchUrl(place)}" target="_blank" rel="noopener"><i data-lucide="map-pin" class="icon"></i>Google 지도</a>
+          <button class="btn" id="focusBtn"><i data-lucide="crosshair" class="icon"></i>지도 중심</button>
+        </div>
+        <iframe class="google-frame" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=${encodeURIComponent(place.googleQuery || place.name)}&output=embed"></iframe>
+        ${routeHtml}
+      `;
+      document.getElementById('focusBtn').onclick = () => {
+        map.setView([place.lat, place.lng], 14, { animate: true });
+        markers.get(place.id)?.openPopup();
+      };
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderRouteBox(day) {
+      const stops = day.route.map(id => PLACES.find(p => p.id === id)).filter(Boolean);
+      return `
+        <div class="route-box">
+          <h3>${day.label} ${day.title}</h3>
+          <div class="small">${day.summary} · ${day.mode}</div>
+          <ol class="route-steps">
+            ${stops.map((p, i) => `<li><span>${i + 1}</span><div>${p.name}</div></li>`).join('')}
+          </ol>
+          <div class="top-actions" style="margin-top:10px">
+            <a class="btn primary" href="${dayRouteUrl(day.id)}" target="_blank" rel="noopener"><i data-lucide="route" class="icon"></i>Google 경로</a>
+          </div>
+        </div>`;
+    }
+
+    function renderCounts() {
+      document.getElementById('attractionCount').textContent = PLACES.filter(p => ['attraction', 'scenic'].includes(p.category)).length;
+      document.getElementById('museumCount').textContent = PLACES.filter(p => p.category === 'museum').length;
+      document.getElementById('foodCount').textContent = PLACES.filter(p => p.category === 'food').length;
+      document.getElementById('rentalCount').textContent = PLACES.filter(p => p.category === 'rental').length;
+      document.getElementById('hotelCount').textContent = PLACES.filter(p => p.category === 'hotel').length;
+      document.getElementById('dayGoogleBtn').href = activeDay === 'all' ? dayRouteUrl('11/12') : dayRouteUrl(activeDay);
+    }
+
+    function renderHotelTable() {
+      const tbody = document.querySelector('#hotelTable tbody');
+      tbody.innerHTML = HOTEL_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderFoodTable() {
+      const tbody = document.querySelector('#foodTable tbody');
+      tbody.innerHTML = FOOD_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderRentalTable() {
+      const tbody = document.querySelector('#rentalTable tbody');
+      tbody.innerHTML = RENTAL_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.querySelector('#historyTable tbody');
+      tbody.innerHTML = HISTORY_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderSpecialtyTable() {
+      const tbody = document.querySelector('#specialtyTable tbody');
+      tbody.innerHTML = SPECIALTY_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderMustEatTable() {
+      const tbody = document.querySelector('#mustEatTable tbody');
+      tbody.innerHTML = MUST_EAT_ROWS.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+    }
+
+    function renderSources() {
+      document.getElementById('sources').innerHTML = SOURCES.map(([label, url]) => `<div><a href="${url}" target="_blank" rel="noopener">${label}</a></div>`).join('');
+    }
+
+    function bindFilters() {
+      document.querySelectorAll('#categoryFilters .chip').forEach(btn => {
+        btn.onclick = () => {
+          activeCategory = btn.dataset.category;
+          document.querySelectorAll('#categoryFilters .chip').forEach(b => b.classList.toggle('active', b === btn));
+          selectedId = visiblePlaces()[0]?.id || selectedId;
+          renderAll();
+        };
+      });
+      document.getElementById('searchInput').addEventListener('input', (event) => {
+        searchTerm = event.target.value.trim();
+        selectedId = visiblePlaces()[0]?.id || selectedId;
+        renderAll();
+      });
+      document.getElementById('fitAllBtn').onclick = () => fitVisible(true);
+    }
+
+    function renderAll() {
+      renderDays();
+      renderCounts();
+      renderMarkers();
+      renderList();
+      renderDetail();
+      if (window.lucide) lucide.createIcons();
+    }
+
+    bindFilters();
+    renderHistoryTable();
+    renderSpecialtyTable();
+    renderMustEatTable();
+    renderHotelTable();
+    renderFoodTable();
+    renderRentalTable();
+    renderSources();
+    renderAll();
+    window.addEventListener('load', () => {
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => map.invalidateSize(), 120);
+    });
+  </script>
+</body>
+</html>
